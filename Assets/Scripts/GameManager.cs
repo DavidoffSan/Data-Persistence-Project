@@ -1,45 +1,72 @@
-using TMPro;
+using System;
+using System.IO;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    public TextMeshProUGUI playerInfoText; // or use UnityEngine.UI.Text if not using TMP
-    private int score = 0;
+    public static GameManager instance;
 
-    //public TextMeshProUGUI highScoreText;
+    public int bestScore;
+    public int currentScore;
+    public string bestPlayerName;
+    public string currentPlayerName;
 
-    void Start()
+    private void Awake()
     {
-        playerInfoText.text = $"High Score: {DataPersistenceManager.Instance.highScorePlayer} - {DataPersistenceManager.Instance.highScore}";
-    }
-
-    void UpdateScoreUI(string playerName)
-    {
-        playerInfoText.text = playerName + " - Score: " + score;
-    }
-
-    // Call this method whenever you want to increase score
-    public void AddScore(int points)
-    {
-        score += points;
-        string playerName = PlayerPrefs.GetString("PlayerName", "Player");
-        UpdateScoreUI(playerName);
-    }
-
-    public void ExitToMenu()
-    {
-        SceneManager.LoadScene(0);
-    }
-
-    void GameOver()
-    {
-        if (score > DataPersistenceManager.Instance.highScore)
+        if (!instance)
         {
-            DataPersistenceManager.Instance.highScore = score;
-            DataPersistenceManager.Instance.highScorePlayer = DataPersistenceManager.Instance.playerName;
-            DataPersistenceManager.Instance.SaveHighScore();
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+
+        LoadScore();
+    }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public int HighScore;
+        public string PlayerName;
+    }
+
+    public void SaveScore()
+    {
+        SaveData data = new SaveData();
+
+        bestPlayerName = currentPlayerName;
+        bestScore = currentScore;
+
+        data.HighScore = bestScore;
+        data.PlayerName = bestPlayerName;
+
+        string json = JsonUtility.ToJson(data);
+
+        Debug.Log("Persistent data path = " + Application.persistentDataPath);
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    public void LoadScore()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            Debug.Log("Persistent data path = " + path);
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+
+            bestScore = data.HighScore;
+            bestPlayerName = data.PlayerName;
+        }
+        else
+        {
+            bestScore = 0;
+            bestPlayerName = "Nobody";
         }
     }
 
 }
+
